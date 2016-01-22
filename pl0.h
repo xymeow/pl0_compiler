@@ -71,8 +71,9 @@ char id[al+1];         // last identifier read
 long num;              // last number read
 long cc;               // character count
 long ll;               // line length
-long kk, err;
-long cx;               // code allocation index
+long kk;
+int cx;               // code allocation index
+int err;
 
 char line[81];
 char a[al+1];
@@ -117,7 +118,7 @@ char mnemonic[8][3+1] = {
 };
 unsigned long declbegsys = constsym|varsym|procsym;
 unsigned long statbegsys = beginsym|callsym|ifsym|whilesym;
-unsigned long facbegsys = ident|number|lparen;
+unsigned long facbegsys = ident|number|lparen|inc|dec;
 
 struct{
     char name[al+1];

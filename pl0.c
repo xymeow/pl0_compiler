@@ -3,7 +3,7 @@
 #include <string.h>
 #include "pl0.h"
 
-void error(long n){
+void error(int n){
     long i;
 
     printf(" ****");
@@ -254,10 +254,10 @@ void arraydeclaration(){
 }
 
 void listcode(long cx0){	// list code generated for this block
-    long i;
+    int i;
 
     for(i = cx0; i <= cx - 1; i++){
-		printf("%10d%5s%3d%5d\n", i, mnemonic[code[i].f], code[i].l, code[i].a);
+		printf("%10d%5s%3ld%5ld\n", i, mnemonic[code[i].f], code[i].l, code[i].a);
     }
 
 }
@@ -417,19 +417,19 @@ void statement(unsigned long fsys){
 		}
 		else if(sym == inc){
     		getsym();
+    		gen(lit, 0, 1);
+			gen(lod, lev - table[i].level, table[i].addr);
+    		gen(opr, 0, 2);
 	    	if(i != 0){
-	    		gen(lod, lev - table[i].level, table[i].addr);
-	    		gen(lit, 0, 1);
-	    		gen(opr, 0, 2);
 	    		gen(sto, lev - table[i].level, table[i].addr);
 	    	}
 	    }
 	    else if(sym == dec){
     		getsym();
+    		gen(lit, 0, -1);
+			gen(lod, lev - table[i].level, table[i].addr);
+    		gen(opr, 0, 2);
 	    	if(i != 0){
-	    		gen(lod, lev - table[i].level, table[i].addr);
-	    		gen(lit, 0, -1);
-	    		gen(opr, 0, 2);
 	    		gen(sto, lev - table[i].level, table[i].addr);
 	    	}
 	    }
@@ -452,7 +452,51 @@ void statement(unsigned long fsys){
 		else{
 		    error(13);
 		}
-
+    }
+    else if(sym == inc){
+    	getsym();
+    	if(sym == ident){
+    		i = position(id);
+    		if(i == 0)
+    			error(11);
+    		else{
+    			if(table[i].kind != variable){    				
+    				error(12);
+    				i = 0;
+    			}
+    			else{
+    				gen(lod, lev - table[i].level, table[i].addr);
+    				gen(lit, 0, 1);
+    				gen(opr, 0, 2);
+    				gen(sto, lev - table[i].level, table[i].addr);
+    				getsym();
+    			}
+    		}
+    	}
+    }
+    else if(sym == dec){
+    	getsym();
+    	if(sym == ident){
+    		i = position(id);
+    		if (i == 0)
+    		{
+    			error(11);
+    		}
+    		else{
+    			if (table[i].kind != variable)
+    			{
+    				error(12);
+    				i = 0;
+    			}
+    			else{
+    				gen(lod, lev - table[i].level, table[i].addr);
+    				gen(lit, 0, 1);
+    				gen(opr, 0, 3);
+    				gen(sto, lev - table[i].level, table[i].addr);
+    				getsym();
+    			}
+    		}
+    	}
     }
     else if(sym == callsym){
 		getsym();
@@ -684,7 +728,7 @@ void interpret(){
 			t = t + 1; s[t] = s[base(b,i.l) + i.a];
 			break;
 	    case sto:
-			s[base(b,i.l) + i.a] = s[t]; printf("%10d\n", s[t]); t = t - 1;
+			s[base(b,i.l) + i.a] = s[t]; printf("%10ld\n", s[t]); t = t - 1;
 			break;
 	    case cal:		// generate new block mark
 			s[t+1] = base(b,i.l); s[t+2] = b; s[t+3] = p;
@@ -723,7 +767,7 @@ void init_ssym(){
     ssym[';'] = semicolon;
 }
 
-main(){
+int main(){
 	init_ssym();
     printf("please input source program file name: ");
     scanf("%s",infilename);
@@ -745,4 +789,5 @@ main(){
     else
 		printf("There are %d errors in PL/0 program\n", err);
     fclose(infile);
+    return 0;
 }

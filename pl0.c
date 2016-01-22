@@ -659,7 +659,79 @@ void statement(unsigned long fsys){
 		else{
 			error(8);
 		}
-    	
+    }
+    else if(sym == forsym){
+    	getsym();
+    	if (sym == ident)
+    	{
+    		i = position(id);
+    		if (i == 0)
+    		{
+    			error(11);
+    		}
+    		else{
+    			if (table[i].kind != variable)
+    			{
+    				error(12);
+    				i = 0;
+    			}
+    			else{
+    				getsym();
+    				if (sym != becomes)
+    					error(13);
+    				else
+    					getsym();
+    				expression(fsys|tosym|downtosym);
+    				gen(sto, lev - table[i].level, table[i].addr);
+    				if (sym == tosym)
+    				{
+    					getsym();
+    					cx1 = cx;
+    					gen(lod, lev - table[i].level, table[i].addr);
+    					expression(fsys|dosym);
+    					gen(opr, 0, 13);
+    					cx2 = cx;
+    					gen(jpc, 0, 0);
+    					if (sym == dosym)
+    					{
+    						getsym();
+    						statement(fsys);
+    						gen(lod, lev - table[i].level, table[i].addr);
+    						gen(lit, 0, 1);
+    						gen(opr, 0, 2);
+    						gen(sto, lev - table[i].level, table[i].addr);
+    						gen(jmp, 0, cx1);
+    						code[cx2].a = cx;
+    					}
+    					else
+    						error(26);
+    				}
+					else if(sym == downtosym){
+						getsym();
+						cx1 = cx;
+						gen(lod, lev - table[i].level, table[i].addr);
+						expression(fsys|dosym);
+						gen(opr, 0, 11);
+						cx2 = cx;
+						gen(jpc, 0, 0);
+						if (sym == dosym)
+						{
+							getsym();
+							statement(fsys);
+							gen(lod, lev - table[i].level, table[i].addr);
+							gen(lit, 0, 1);
+							gen(opr, 0, 3);
+							gen(sto, lev - table[i].level, table[i].addr);
+							gen(jmp, 0, cx1);
+							code[cx2].a = cx;
+						}
+						else
+							error(26);
+					
+					}
+    			}
+    		}
+    	}
     }
     test(fsys, 0, 19);
 }

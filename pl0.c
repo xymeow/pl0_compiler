@@ -37,8 +37,16 @@ void getch() {
 void getsym(){
     long i,j,k;
 
-    while(ch==' '||ch=='\t'){
-		getch();
+    while(ch == ' '||ch == '\t'||ch == '*'){
+    	if (ch == '*') //notes
+    	{
+    		getch();
+    		while(ch != '*')
+    			getch();
+    		getch();
+    	}
+    	else
+			getch();
     }
     if(isalpha(ch)){ 	// identified or reserved
 		k = 0;
@@ -75,7 +83,7 @@ void getsym(){
 		    sym = wsym[k];
 		}
 		else{
-		    sym=ident;
+		    sym = ident;
 		}
     }
     else if(isdigit(ch)){ // number
@@ -287,6 +295,73 @@ void factor(unsigned long fsys){
 				}
 		    }
 		    getsym();
+		    if (sym == inc)
+		    {
+		    	gen(lit, lev - table[i].level, 1);
+		    	gen(opr, lev - table[i].level, 2);
+		    	gen(sto, lev - table[i].level, table[i].addr);
+				gen(lod, lev - table[i].level, table[i].addr);
+				gen(lit, 0, 1);
+				gen(opr, 0, 3);
+				getsym();
+		    }
+		    else if(sym == dec){
+		    	gen(lit, lev - table[i].level, 1);
+		    	gen(opr, lev - table[i].level, 3);
+		    	gen(sto, lev - table[i].level, table[i].addr);
+				gen(lod, lev - table[i].level, table[i].addr);
+				gen(lit, 0, 1);
+				gen(opr, 0, 2);
+				getsym();
+		    }
+		}
+		else if(sym == inc){
+			getsym();
+			if(sym == ident){
+				getsym();
+				i = position(id);
+				if (i == 0)
+				{
+					error(11);
+				}
+				else{
+					if (table[i].kind != variable)
+					{
+						error(12);
+					}
+					else{
+						gen(lod, lev - table[i].level, table[i].addr);
+						gen(lit, 0, 1);
+						gen(opr, 0, 2);
+						gen(sto, lev - table[i].level, table[i].addr);
+						gen(lod, lev - table[i].level, table[i].addr);
+					}
+				}
+			}
+		}
+		else if(sym == dec){
+			getsym();
+			if(sym == ident){
+				getsym();
+				i = position(id);
+				if (i == 0)
+				{
+					error(11);
+				}
+				else{
+					if (table[i].kind != variable)
+					{
+						error(12);
+					}
+					else{
+						gen(lod, lev - table[i].level, table[i].addr);
+						gen(lit, 0, 1);
+						gen(opr, 0, 3);
+						gen(sto, lev - table[i].level, table[i].addr);
+						gen(lod, lev - table[i].level, table[i].addr);
+					}
+				}
+			}
 		}
 		else if(sym == number){
 		    if(num > amax){
@@ -564,7 +639,28 @@ void statement(unsigned long fsys){
 		gen(jmp, 0, cx1);
 		code[cx2].a = cx;
     }
-
+    else if (sym == repsym)
+    {
+    	cx1 = cx;
+    	getsym();
+    	while(sym != untsym){
+    		statement(fsys|semicolon|untsym);
+    		if (sym == semicolon)
+    		{
+    			getsym();
+    		}
+    	}
+		if (sym == untsym)
+		{
+			getsym();
+			condition(fsys|semicolon);
+			gen(jpc, 0, cx1);
+		}
+		else{
+			error(8);
+		}
+    	
+    }
     test(fsys, 0, 19);
 }
 			

@@ -1,6 +1,6 @@
 #include <stdio.h>
 
-#define norw       11             // no. of reserved words
+#define norw       13             // no. of reserved words
 #define txmax      100            // length of identifier table
 #define nmax       14             // max. no. of digits in numbers
 #define al         10             // length of identifiers
@@ -42,6 +42,8 @@
 #define dec        0x80000000
 #define pluseq     0x100000000
 #define minuseq    0x200000000
+#define repsym     0x400000000
+#define untsym     0x800000000
 
 enum object {
     constant, variable, proc
@@ -83,11 +85,16 @@ char word[norw][al+1] = {
     "call      ",
     "const     ",
     "do        ",
+    "downto    ",
     "end       ",
+    "for       ",
     "if        ",
     "odd       ",
     "procedure ",
+    "repeat    ",
     "then      ",
+    "to        ",
+    "until     ",
     "var       ",
     "while     ",
 };
@@ -100,7 +107,9 @@ unsigned long wsym[norw] = {
     ifsym,
     oddsym,
     procsym,
+    repsym,
     thensym,
+    untsym,
     varsym,
     whilesym
 };
@@ -166,7 +175,7 @@ char* err_msg[] = {
     "The symbol can not be followed by a factor.",
     "The symbol can not be as the beginning of an expression.",
     "The number is too great.",
-    "",
+    "The repeat should be followed by until",
     "",
     "",
     "",

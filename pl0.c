@@ -405,13 +405,23 @@ void statement(unsigned long fsys){
 		}
 		else if(table[i].kind != variable){	// assignment to non-variable
 		    error(12); 
-		    i=0;
+		    i = 0;
 		}
 		getsym();
 		if(sym == becomes){
 		    getsym();
 		}
+		else if(sym == inc){
+    		getsym();
+	    	if(i != 0){
+	    		gen(lod, lev - table[i].level, table[i].addr);
+	    		gen(lit, 0, 1);
+	    		gen(opr, 0, 2);
+	    		gen(sto, lev - table[i].level, table[i].addr);
+	    	}
+	    }
 		else{
+			printf("%ld\n", sym);
 		    error(13);
 		}
 		expression(fsys);
@@ -485,6 +495,7 @@ void statement(unsigned long fsys){
 		gen(jmp, 0, cx1);
 		code[cx2].a = cx;
     }
+
     test(fsys, 0, 19);
 }
 			

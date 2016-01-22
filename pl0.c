@@ -410,6 +410,10 @@ void statement(unsigned long fsys){
 		getsym();
 		if(sym == becomes){
 		    getsym();
+		    expression(fsys);
+			if(i != 0){
+			    gen(sto, lev - table[i].level, table[i].addr);
+			}
 		}
 		else if(sym == inc){
     		getsym();
@@ -420,14 +424,35 @@ void statement(unsigned long fsys){
 	    		gen(sto, lev - table[i].level, table[i].addr);
 	    	}
 	    }
+	    else if(sym == dec){
+    		getsym();
+	    	if(i != 0){
+	    		gen(lod, lev - table[i].level, table[i].addr);
+	    		gen(lit, 0, -1);
+	    		gen(opr, 0, 2);
+	    		gen(sto, lev - table[i].level, table[i].addr);
+	    	}
+	    }
+	    else if(sym == pluseq){
+	    	getsym();
+	    	expression(fsys);
+	    	if(i != 0){
+	    		gen(opr, 0, 2);
+	    		gen(sto, lev - table[i].level, table[i].addr);
+	    	}
+	    }
+	    else if(sym == minuseq){
+	    	getsym();
+	    	expression(fsys);
+	    	if(i != 0){
+	    		gen(opr, 0, 3);
+	    		gen(sto, lev - table[i].level, table[i].addr);
+	    	}
+	    }
 		else{
-			printf("%ld\n", sym);
 		    error(13);
 		}
-		expression(fsys);
-		if(i != 0){
-		    gen(sto, lev - table[i].level, table[i].addr);
-		}
+
     }
     else if(sym == callsym){
 		getsym();

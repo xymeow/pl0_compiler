@@ -189,10 +189,13 @@ void test(unsigned long s1, unsigned long s2, long n){
     }
 }
 
+int position(char* id);
 void enter(enum object k){		// enter object into table
-	if (position(id) > 0)
+	i = position(id);
+	if (i > 0 && table[i].level == lev)
 	{
 		error(26);
+		return;
 	}
     tx = tx + 1;
     strcpy(table[tx].name, id);
@@ -221,7 +224,7 @@ void enter(enum object k){		// enter object into table
     }
 }
 
-long position(char* id){	// find identifier id in table
+int position(char* id){	// find identifier id in table
     int i;
 
     strcpy(table[0].name, id);
@@ -280,7 +283,7 @@ void listcode(long cx0){	// list code generated for this block
     int i;
 
     for(i = cx0; i <= cx - 1; i++){
-		printf("%10d%5s%3ld%5ld\n", i, mnemonic[code[i].f], code[i].l, code[i].a);
+		fprintf(midfile, "%10d%5s%3ld%5ld\n", i, mnemonic[code[i].f], code[i].l, code[i].a);
     }
 
 }
@@ -985,7 +988,12 @@ void interpret(){
 					t = t - 1; s[t] = s[t] * s[t+1];
 					break;
 			    case 5:
-					t = t - 1; s[t] = s[t] / s[t+1];
+					t = t - 1; 
+					if (s[t+1] == 0)
+					{
+						fprintf(stderr, "Runtime error: divided by zero.\n");
+					}
+					s[t] = s[t] / s[t+1];
 					break;
 			    case 6:
 					s[t] = s[t] % 2;
@@ -1036,11 +1044,14 @@ void interpret(){
 			p=i.a;
 			break;
 	    case jpc:
-		if(s[t] == 0){
-			    p = i.a;
-			}
+			if(s[t] == 0){
+				    p = i.a;
+				}
 			t = t-1;
-		}
+			break;				
+		default:
+			fprintf(stderr, "Runtime error: unexpected instruction.\n");
+			}
     }while(p != 0);
     printf("end PL/0\n");
 }
@@ -1071,7 +1082,8 @@ int main(){
 		printf("File %s can't be opened.\n", infilename);
 		exit(1);
     }
-    
+    midfile = fopen("out.txt", "w");
+
     err = 0;
     cc = 0; cx = 0; ll = 0; ch=' '; kk = al; 
     getsym();
@@ -1080,9 +1092,11 @@ int main(){
     if(sym != period)
 		error(9);
     if(err == 0)
-		interpret();
+    	printf("compile completed.\n");
+		//interpret();
     else
 		printf("There are %d errors in PL/0 program\n", err);
+	fclose(midfile);
     fclose(infile);
     return 0;
 }

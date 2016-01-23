@@ -166,6 +166,7 @@ struct{
 
 char infilename[80];
 FILE* infile;
+FILE* midfile;
 
 // the following variables for block
 long dx;		// data allocation index

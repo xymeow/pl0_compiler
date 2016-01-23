@@ -5,7 +5,7 @@ begin
 	i := false;
 	j := i or (false and false);
 	x := y;
-	y := (x + 1)+2;
+	y := 3;
     y := x--;
     * edrmalfuei*
 end.

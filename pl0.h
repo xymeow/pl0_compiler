@@ -204,7 +204,7 @@ char* err_msg[] = {
     "The symbol can not be followed by a factor.",
     "The symbol can not be as the beginning of an expression.",
     "The number is too great.",
-    "without do",
+    "Redeclear identifier",
     "",
     "",
     "",

@@ -190,6 +190,10 @@ void test(unsigned long s1, unsigned long s2, long n){
 }
 
 void enter(enum object k){		// enter object into table
+	if (position(id) > 0)
+	{
+		error(26);
+	}
     tx = tx + 1;
     strcpy(table[tx].name, id);
     table[tx].kind = k;
@@ -801,7 +805,7 @@ void statement(unsigned long fsys){
     						code[cx2].a = cx;
     					}
     					else
-    						error(26);
+    						error(18);
     				}
 					else if(sym == downtosym){
 						getsym();
@@ -823,7 +827,7 @@ void statement(unsigned long fsys){
 							code[cx2].a = cx;
 						}
 						else
-							error(26);
+							error(18);
 					
 					}
     			}

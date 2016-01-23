@@ -1,7 +1,11 @@
+const a = 0;
 var x,y;
+bool i, j;
 begin
-	x := 1;
-	y := x + 1;
+	i := false;
+	j := i or (false and false);
+	x := y;
+	y := (x + 1)+2;
     y := x--;
-    for x := 10 downto 1 do y := x;
+    * edrmalfuei*
 end.

@@ -1,6 +1,6 @@
 #include <stdio.h>
 
-#define norw       16             // no. of reserved words
+#define norw       23             // no. of reserved words
 #define txmax      100            // length of identifier table
 #define nmax       14             // max. no. of digits in numbers
 #define al         10             // length of identifiers
@@ -47,9 +47,16 @@
 #define downtosym  0x1000000000
 #define forsym     0x2000000000
 #define tosym      0x4000000000
+#define elsesym    0x8000000000
+#define boolsym    0x10000000000
+#define truesym    0x20000000000
+#define falsesym   0x40000000000
+#define andsym     0x80000000000
+#define notsym     0x100000000000
+#define orsym      0x200000000000
 
 enum object {
-    constant, variable, proc
+    constant, variable, proc, bool
 };
 
 enum fct {
@@ -58,7 +65,7 @@ enum fct {
 
 typedef struct{
     enum fct f;		// function code
-    long l; 		// level
+    int l; 		// level
     long a; 		// displacement address
 } instruction;
 /*  lit 0, a : load constant a
@@ -84,37 +91,51 @@ char line[81];
 char a[al+1];
 instruction code[cxmax+1];
 char word[norw][al+1] = {
+    "and       ",
     "begin     ",
+    "bool      ",
     "call      ",
     "const     ",
     "do        ",
     "downto    ",
+    "else      ",
     "end       ",
+    "false     ",
     "for       ",
     "if        ",
+    "not       ",
     "odd       ",
+    "or        ",
     "procedure ",
     "repeat    ",
     "then      ",
     "to        ",
+    "true      ",
     "until     ",
     "var       ",
     "while     ",
 };
 unsigned long wsym[norw] = {
+    andsym,
     beginsym,
+    boolsym,
     callsym,
     constsym,
     dosym,
     downtosym,
+    elsesym,
     endsym,
+    falsesym,
     forsym,
     ifsym,
+    notsym,
     oddsym,
+    orsym,
     procsym,
     repsym,
     thensym,
     tosym,
+    truesym,
     untsym,
     varsym,
     whilesym
@@ -131,9 +152,9 @@ char mnemonic[8][3+1] = {
     "jmp",
     "jpc"
 };
-unsigned long declbegsys = constsym|varsym|procsym;
+unsigned long declbegsys = constsym|varsym|procsym|boolsym;
 unsigned long statbegsys = beginsym|callsym|ifsym|whilesym;
-unsigned long facbegsys = ident|number|lparen|inc|dec;
+unsigned long facbegsys = ident|number|lparen|inc|dec|truesym|falsesym;
 
 struct{
     char name[al+1];
@@ -148,8 +169,10 @@ FILE* infile;
 
 // the following variables for block
 long dx;		// data allocation index
-long lev;		// current depth of block nesting
+int lev;		// current depth of block nesting
 long tx;		// current table index
+
+enum object type, type1;
 
 // the following array space for interpreter
 #define stacksize 50000

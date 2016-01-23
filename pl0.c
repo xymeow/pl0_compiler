@@ -7,6 +7,7 @@ void error(int n){
     long i;
 
     printf(" ****");
+    //printf("%u\n", type);
     for (i = 1; i <= cc - 1; i++){
 	printf(" ");
     }
@@ -208,6 +209,11 @@ void enter(enum object k){		// enter object into table
 		case proc:
 		    table[tx].level = lev;
 		    break;
+		case bool:
+			table[tx].level = lev;
+			table[tx].addr = dx;
+			dx ++;
+			break;
     }
 }
 
@@ -252,13 +258,18 @@ void vardeclaration(){
 		enter(variable); 
 		getsym();
     }
-    else{
-	error(4);
-    }
+    else
+		error(4);
 }
 
-void arraydeclaration(){
-	;
+void booldeclaration(){
+	if (sym == ident)
+	{
+		enter(bool);
+		getsym();
+	}
+	else
+		error(4);
 }
 
 void listcode(long cx0){	// list code generated for this block
@@ -271,6 +282,7 @@ void listcode(long cx0){	// list code generated for this block
 }
 
 void expression(unsigned long);
+void boolexp(unsigned long);
 void factor(unsigned long fsys){
     long i;
 	
@@ -282,20 +294,33 @@ void factor(unsigned long fsys){
 				error(11);
 		    }
 		    else{
-				switch(table[i].kind){
+		    	type1 = table[i].kind;
+				switch(type1){
 				    case constant:
-						gen(lit, 0, table[i].val);
+				    	if(type == bool)
+				    		error(12);
+				    	else
+							gen(lit, 0, table[i].val);
 						break;
 				    case variable:
-						gen(lod, lev - table[i].level, table[i].addr);
+				    	if(type == bool)
+				    		error(12);
+				    	else
+							gen(lod, lev - table[i].level, table[i].addr);
 						break;
 				    case proc:
 						error(21);
 						break;
+					case bool:
+						if(type != bool)
+							error(12);
+						else
+							gen(lod, lev - table[i].level, table[i].addr);
+						break;
 				}
 		    }
 		    getsym();
-		    if (sym == inc)
+			if (sym == inc)
 		    {
 		    	gen(lit, lev - table[i].level, 1);
 		    	gen(opr, lev - table[i].level, 2);
@@ -364,16 +389,40 @@ void factor(unsigned long fsys){
 			}
 		}
 		else if(sym == number){
-		    if(num > amax){
-				error(31); 
-				num = 0;
-		    }
-		    gen(lit, 0, num);
-		    getsym();
+			if(type != variable)
+				error(12);
+			else{
+				if(num > amax){
+					error(31); 
+					num = 0;
+			    }
+			    gen(lit, 0, num);
+			    getsym();
+			}
+		}
+		else if(sym == truesym){
+			if(type != bool)
+				error(12);
+			else{
+				gen(lit, 0, 1);
+				getsym();
+			}
+		}
+		else if(sym == falsesym){
+			if(type != bool)
+				error(12);
+			else{
+				gen(lit, 0, 0);
+				getsym();
+			}
+			
 		}
 		else if(sym == lparen){
 			    getsym();
-			    expression(rparen|fsys);
+			    if(type == bool)
+			    	boolexp(rparen|fsys);
+			    else
+			    	expression(rparen|fsys);
 		    if(sym == rparen){
 				getsym();
 		    }
@@ -403,20 +452,20 @@ void term(unsigned long fsys){
 }
 
 void expression(unsigned long fsys){
-    unsigned long addop;
-
-    if(sym == plus||sym == minus){
+	unsigned long addop;
+	//type = variable;
+	if(sym == plus||sym == minus){
 		addop = sym; 
 		getsym();
 		term(fsys|plus|minus);
 		if(addop == minus){
 		    gen(opr, 0, 1); //neg
 		}
-    }
-    else{
+	}
+	else{
 		term(fsys|plus|minus);
-    }
-    while(sym == plus||sym == minus){
+	}
+	while(sym == plus||sym == minus){
 		addop = sym; 
 		getsym();
 		term(fsys|plus|minus);
@@ -426,7 +475,37 @@ void expression(unsigned long fsys){
 		else{
 		    gen(opr,0,3); //-
 		}
-    }
+	}
+}
+
+// void boolterm(unsigned long fsys){
+
+// }
+
+void boolexp(unsigned long fsys){
+	//type = bool;
+	unsigned long op;
+	if (sym == notsym)
+	{	
+		getsym();
+		factor(fsys|notsym|andsym|orsym);
+		gen(opr, 0, 14);
+	}
+	else
+		factor(fsys|notsym|andsym|orsym);
+	while(sym == andsym || sym == orsym || sym == notsym){
+		op = sym;
+		getsym();
+		factor(fsys|notsym|andsym|orsym);
+		switch(op){
+			case andsym:
+				gen(opr, 0, 15); break;
+			case orsym:
+				gen(opr, 0, 16); break;
+			case notsym:
+				gen(opr, 0, 14); break;
+		}
+	}
 }
 
 void condition(unsigned long fsys){
@@ -478,14 +557,18 @@ void statement(unsigned long fsys){
 		if(i == 0){
 		    error(11);
 		}
-		else if(table[i].kind != variable){	// assignment to non-variable
+		else if(table[i].kind != variable && table[i].kind != bool){	// assignment to non-variable
 		    error(12); 
 		    i = 0;
 		}
+		type = table[i].kind;
 		getsym();
 		if(sym == becomes){
 		    getsym();
-		    expression(fsys);
+		    if(type == variable)
+		    	expression(fsys);
+		    else 
+		    	boolexp(fsys);
 			if(i != 0){
 			    gen(sto, lev - table[i].level, table[i].addr);
 			}
@@ -603,7 +686,21 @@ void statement(unsigned long fsys){
 		cx1=cx;	
 		gen(jpc, 0, 0);
 		statement(fsys);
-		code[cx1].a = cx;	
+		code[cx1].a = cx + 1;	
+		cx2 = cx;
+		gen(jmp, 0, cx + 1);
+		if (sym == semicolon)
+		{
+			getsym();
+		}
+		if (sym == elsesym)
+		{
+			getsym();
+			statement(fsys);
+			code[cx2].a = cx;
+		}
+		else
+			statement(fsys);
     }
     else if(sym == beginsym){
 		getsym(); 
@@ -782,6 +879,23 @@ void block(unsigned long fsys){
 				}
 		    }while(sym == ident);
 		}
+		if (sym == boolsym)
+		{
+			getsym();
+			do{
+				booldeclaration();
+				while(sym == comma){
+					getsym();
+					booldeclaration();
+				}
+				if (sym == semicolon)
+				{
+					getsym();
+				}
+				else
+					error(5);
+			}while(sym == ident);
+		}
 		while(sym == procsym){
 		    getsym();
 		    if(sym == ident){
@@ -889,6 +1003,15 @@ void interpret(){
 					break;
 			    case 13:
 					t = t - 1; s[t] = (s[t] <= s[t+1]);
+					break;
+				case 14: //not
+					s[t] = !s[t];
+					break;
+				case 15: //and
+					t = t - 1; s[t] = s[t] & s[t+1];
+					break;
+				case 16: //or
+					t = t - 1; s[t] = s[t] | s[t+1];
 					break;
 			}
 			break;

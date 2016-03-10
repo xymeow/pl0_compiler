@@ -38,15 +38,24 @@ void getch() {
 void getsym(){
     long i,j,k;
 
-    while(ch == ' '||ch == '\t'||ch == '*'){
-    	if (ch == '*') //notes
-    	{
-    		getch();
-    		while(ch != '*')
-    			getch();
-    		getch();
-    	}
-    	else
+    while(ch == ' '||ch == '\t'){
+    	// if (ch == '/') //notes
+    	// {
+    	// 	getch();
+    	// 	if(ch == '*'){
+    	// 		while(1){
+    	// 			while(ch != '*')
+    	// 				getch();
+	    // 			getch();
+	    // 			if(ch == '/')
+	    // 				break;
+    	// 		}
+    	// 		getch();
+    	// 	}
+    	// 	else
+    	// 		sym = slash;
+    	// }
+    	// else
 			getch();
     }
     if(isalpha(ch)){ 	// identified or reserved
@@ -109,6 +118,22 @@ void getsym(){
 		    sym = nul;
 		}
     }
+    else if (ch == '/') //notes
+	{
+		getch();
+		if(ch == '*'){
+			while(1){
+				while(ch != '*')
+					getch();
+    			getch();
+    			if(ch == '/')
+    				break;
+			}
+			getch();
+		}
+		else
+			sym = slash;
+	}
     else if(ch == '<'){
 		getch();
 		if(ch == '='){
@@ -162,6 +187,19 @@ void getsym(){
 			sym = minus;
 		}
 	}
+	else if(ch == '['){
+		getch();
+		getsym();
+		sum = num;
+		if(ch == ']'){
+			getch();
+			sym = arraysym;
+		}
+		else
+			error(28);
+		if(sum < 1)
+			error(29);
+	}
 	else{
 		sym = ssym[(unsigned char)ch]; 
 		getch();
@@ -191,6 +229,7 @@ void test(unsigned long s1, unsigned long s2, long n){
 
 int position(char* id);
 void enter(enum object k){		// enter object into table
+	long i;
 	i = position(id);
 	if (i > 0 && table[i].level == lev)
 	{
@@ -212,6 +251,7 @@ void enter(enum object k){		// enter object into table
 		    table[tx].level = lev; 
 		    table[tx].addr = dx; 
 		    dx = dx + 1;
+		    table[tx].size = 0;
 		    break;
 		case proc:
 		    table[tx].level = lev;
@@ -220,6 +260,11 @@ void enter(enum object k){		// enter object into table
 			table[tx].level = lev;
 			table[tx].addr = dx;
 			dx ++;
+			break;
+		case array:
+			table[tx].level = lev;
+			table[tx].addr = dx - arraysize;
+			table[tx].size = arraysize;
 			break;
     }
 }
@@ -232,6 +277,15 @@ int position(char* id){	// find identifier id in table
     while(strcmp(table[i].name, id) != 0){
 		i = i - 1;
     }
+    if(ch == '[')
+    	getsym();
+    if(sym == rsparen){
+    	if(table[i].size > sum)
+    		i = i + sum + 1;
+    	else
+    		error(29);
+    }
+    sum = 0;
     return i;
 }
 
@@ -261,9 +315,53 @@ void constdeclaration(){
 }
 
 void vardeclaration(){
+	int i;
+	char temp[al+1];
     if(sym == ident){
-		enter(variable); 
-		getsym();
+    	strcpy(temp, id);
+    	getsym();
+    	if (sym == lsparen)
+    	{
+    		getsym();
+    		if (sym == number)
+    		{
+    			dx += num;
+    			arraysize = num;
+    		}
+    		else{
+    			if (sym == ident)
+    			{
+    				i = position(id);
+    				if (i == 0)
+    				{
+    					error(11);
+    				}
+    				else{
+    					if (table[i].kind == constant)
+    					{
+    						dx += table[i].val;
+    						arraysize = table[i].val;
+    					}
+    					else
+    						error(27);
+    				}
+    			}
+    			else
+    				error(27);
+    		}
+    		strcpy(id, temp);
+    		enter(array);
+    		getsym();
+    		if (sym != rsparen)
+    		{
+    			error(28);
+    		}
+    		else
+    			getsym();
+    	}
+    	else if(sym == comma||sym == semicolon){
+			enter(variable); 
+    	}
     }
     else
 		error(4);
@@ -324,6 +422,24 @@ void factor(unsigned long fsys){
 						else
 							gen(lod, lev - table[i].level, table[i].addr);
 						break;
+					case array:
+						getsym();
+						if (sym == lsparen)
+						{
+							getsym();
+							expression(fsys|rsparen);
+							gen(tra, 0, table[i].size);
+							gen(jug, 0, 0);
+							gen(rda, lev - table[i].level, table[i].addr);
+							if (sym != rsparen)
+							{
+								error(28);
+							}
+							else
+								getsym();
+
+						}
+						break;
 				}
 		    }
 		    getsym();
@@ -331,8 +447,14 @@ void factor(unsigned long fsys){
 		    {
 		    	gen(lit, lev - table[i].level, 1);
 		    	gen(opr, lev - table[i].level, 2);
-		    	gen(sto, lev - table[i].level, table[i].addr);
-				gen(lod, lev - table[i].level, table[i].addr);
+		    	if(type1 == array)
+		    		gen(wta, lev - table[i].level, table[i].addr);
+		    	else
+		    		gen(sto, lev - table[i].level, table[i].addr);
+		    	if(type1 == array)
+		    		gen(rda, lev - table[i].level, table[i].addr);
+		    	else
+					gen(lod, lev - table[i].level, table[i].addr);
 				gen(lit, 0, 1);
 				gen(opr, 0, 3);
 				getsym();
@@ -340,8 +462,14 @@ void factor(unsigned long fsys){
 		    else if(sym == dec){
 		    	gen(lit, lev - table[i].level, 1);
 		    	gen(opr, lev - table[i].level, 3);
-		    	gen(sto, lev - table[i].level, table[i].addr);
-				gen(lod, lev - table[i].level, table[i].addr);
+		    	if(type1 == array)
+		    		gen(wta, lev - table[i].level, table[i].addr);
+		    	else
+		    		gen(sto, lev - table[i].level, table[i].addr);
+		    	if(type1 == array)
+		    		gen(rda, lev - table[i].level, table[i].addr);
+		    	else
+					gen(lod, lev - table[i].level, table[i].addr);
 				gen(lit, 0, 1);
 				gen(opr, 0, 2);
 				getsym();
@@ -352,21 +480,31 @@ void factor(unsigned long fsys){
 			if(sym == ident){
 				getsym();
 				i = position(id);
+				type1 = table[i].kind;
 				if (i == 0)
 				{
 					error(11);
 				}
 				else{
-					if (table[i].kind != variable)
+					if (type1 != variable && type1 != array)
 					{
 						error(12);
 					}
 					else{
-						gen(lod, lev - table[i].level, table[i].addr);
+						if(type1 == array)
+		    				gen(rda, lev - table[i].level, table[i].addr);
+				    	else
+							gen(lod, lev - table[i].level, table[i].addr);
 						gen(lit, 0, 1);
 						gen(opr, 0, 2);
-						gen(sto, lev - table[i].level, table[i].addr);
-						gen(lod, lev - table[i].level, table[i].addr);
+			    		if(type1 == array)
+				    		gen(wta, lev - table[i].level, table[i].addr);
+				    	else
+				    		gen(sto, lev - table[i].level, table[i].addr);
+				    	if(type1 == array)
+				    		gen(rda, lev - table[i].level, table[i].addr);
+				    	else
+							gen(lod, lev - table[i].level, table[i].addr);
 					}
 				}
 			}
@@ -376,6 +514,7 @@ void factor(unsigned long fsys){
 			if(sym == ident){
 				getsym();
 				i = position(id);
+				type1 = table[i].kind;
 				if (i == 0)
 				{
 					error(11);
@@ -386,17 +525,26 @@ void factor(unsigned long fsys){
 						error(12);
 					}
 					else{
-						gen(lod, lev - table[i].level, table[i].addr);
+			    		if(type1 == array)
+				    		gen(rda, lev - table[i].level, table[i].addr);
+				    	else
+							gen(lod, lev - table[i].level, table[i].addr);
 						gen(lit, 0, 1);
 						gen(opr, 0, 3);
-						gen(sto, lev - table[i].level, table[i].addr);
-						gen(lod, lev - table[i].level, table[i].addr);
+			    		if(type1 == array)
+				    		gen(wta, lev - table[i].level, table[i].addr);
+				    	else
+				    		gen(sto, lev - table[i].level, table[i].addr);
+				    	if(type1 == array)
+				    		gen(rda, lev - table[i].level, table[i].addr);
+				    	else
+							gen(lod, lev - table[i].level, table[i].addr);
 					}
 				}
 			}
 		}
 		else if(sym == number){
-			if(type != variable)
+			if(type != variable && type != array)
 				error(12);
 			else{
 				if(num > amax){
@@ -557,19 +705,31 @@ void condition(unsigned long fsys){
 }
 
 void statement(unsigned long fsys){
-    long i, cx1, cx2;
+    long i, cx1, cx2, i2;
 
     if(sym == ident){
 		i = position(id);
 		if(i == 0){
 		    error(11);
 		}
-		else if(table[i].kind != variable && table[i].kind != bool){	// assignment to non-variable
+		else if(table[i].kind != variable && table[i].kind != bool && table[i].kind != array){	// assignment to non-variable
 		    error(12); 
 		    i = 0;
 		}
 		type = table[i].kind;
 		getsym();
+		if (sym == lsparen)
+		{
+			getsym();
+			expression(fsys|rsparen);
+			gen(tra, 0, table[i].size);
+			gen(jug, 0, 0);
+			if (sym != rsparen)
+			{
+				error(28);
+			}
+			getsym();
+		}
 		if(sym == becomes){
 		    getsym();
 		    if(type == variable)
@@ -577,7 +737,10 @@ void statement(unsigned long fsys){
 		    else 
 		    	boolexp(fsys);
 			if(i != 0){
-			    gen(sto, lev - table[i].level, table[i].addr);
+				if (type == array)
+					gen(wta, lev - table[i].level, table[i].addr);
+				else
+			    	gen(sto, lev - table[i].level, table[i].addr);
 			}
 		}
 		else if(sym == inc){
@@ -586,7 +749,10 @@ void statement(unsigned long fsys){
 			gen(lod, lev - table[i].level, table[i].addr);
     		gen(opr, 0, 2);
 	    	if(i != 0){
-	    		gen(sto, lev - table[i].level, table[i].addr);
+	    		if (type == array)
+					gen(wta, lev - table[i].level, table[i].addr);
+				else
+			    	gen(sto, lev - table[i].level, table[i].addr);
 	    	}
 	    }
 	    else if(sym == dec){
@@ -595,7 +761,10 @@ void statement(unsigned long fsys){
 			gen(lod, lev - table[i].level, table[i].addr);
     		gen(opr, 0, 2);
 	    	if(i != 0){
-	    		gen(sto, lev - table[i].level, table[i].addr);
+	    		if (type == array)
+					gen(wta, lev - table[i].level, table[i].addr);
+				else
+			    	gen(sto, lev - table[i].level, table[i].addr);
 	    	}
 	    }
 	    else if(sym == pluseq){
@@ -603,7 +772,10 @@ void statement(unsigned long fsys){
 	    	expression(fsys);
 	    	if(i != 0){
 	    		gen(opr, 0, 2);
-	    		gen(sto, lev - table[i].level, table[i].addr);
+	    		if (type == array)
+					gen(wta, lev - table[i].level, table[i].addr);
+				else
+			    	gen(sto, lev - table[i].level, table[i].addr);
 	    	}
 	    }
 	    else if(sym == minuseq){
@@ -611,7 +783,10 @@ void statement(unsigned long fsys){
 	    	expression(fsys);
 	    	if(i != 0){
 	    		gen(opr, 0, 3);
-	    		gen(sto, lev - table[i].level, table[i].addr);
+	    		if (type == array)
+					gen(wta, lev - table[i].level, table[i].addr);
+				else
+			    	gen(sto, lev - table[i].level, table[i].addr);
 	    	}
 	    }
 		else{
@@ -633,7 +808,10 @@ void statement(unsigned long fsys){
     				gen(lod, lev - table[i].level, table[i].addr);
     				gen(lit, 0, 1);
     				gen(opr, 0, 2);
-    				gen(sto, lev - table[i].level, table[i].addr);
+    			if (type == array)
+					gen(wta, lev - table[i].level, table[i].addr);
+				else
+			    	gen(sto, lev - table[i].level, table[i].addr);
     				getsym();
     			}
     		}
@@ -657,7 +835,10 @@ void statement(unsigned long fsys){
     				gen(lod, lev - table[i].level, table[i].addr);
     				gen(lit, 0, 1);
     				gen(opr, 0, 3);
-    				gen(sto, lev - table[i].level, table[i].addr);
+    			if (type == array)
+					gen(wta, lev - table[i].level, table[i].addr);
+				else
+			    	gen(sto, lev - table[i].level, table[i].addr);
     				getsym();
     			}
     		}
@@ -874,9 +1055,18 @@ void block(unsigned long fsys){
 		    getsym();
 		    do{
 				vardeclaration();
+				if(sym == arraysym){
+					enter(array);
+					getsym();
+				}
 				while(sym == comma){
 				    getsym(); 
 				    vardeclaration();
+				    if (sym == arraysym)
+				    {
+				    	enter(array);
+				    	getsym();
+				    }
 				}
 				if(sym == semicolon){
 				    getsym();
@@ -941,9 +1131,8 @@ void block(unsigned long fsys){
     statement(fsys|semicolon|endsym);
     gen(opr, 0, 0); // return
     test(fsys, 0, 8);
-    listcode(cx0);
+    //listcode(cx0);
 }
-
 long base(long b, long l){
     long b1;
 
@@ -956,15 +1145,17 @@ long base(long b, long l){
 }
 
 void interpret(){
-    long p,b,t;		// program-, base-, topstack-registers
+    long b,t,p;		// program-, base-, topstack-registers
     instruction i;	// instruction register
 
     printf("start PL/0\n");
-    t = 0; b = 1; p = 0;
+    t = 0; b = 1;p = 0;
     s[1] = 0; s[2] = 0; s[3] = 0;
     do{
+
 	i = code[p];
 	p ++;
+
 	switch(i.f){
 	    case lit:
 			t++;
@@ -1048,8 +1239,24 @@ void interpret(){
 				    p = i.a;
 				}
 			t = t-1;
-			break;				
+			break;
+		case tra:
+			s[t] = i.a;
+			t ++;
+			break;
+		case rda:
+			s[t] = s[base(b, i.l) + i.a + s[t-1]]; t++;
+			break;
+		case wta:
+			s[base(b, i.l) + i.a + s[t-2]] = s[t-1]; printf("%10ld\n", s[t]); t--; 
+			break;
+		case jug:
+			t --;
+			if (s[t-1] < 0 || s[t-1] >= s[t])
+			fprintf(stderr, "Runtime error: array index overflow.\n");
+			break;
 		default:
+			//printf("%u\n", i.f);
 			fprintf(stderr, "Runtime error: unexpected instruction.\n");
 			}
     }while(p != 0);
@@ -1071,6 +1278,8 @@ void init_ssym(){
     ssym[','] = comma;
     ssym['.'] = period;
     ssym[';'] = semicolon;
+    ssym['['] = lsparen;
+    ssym[']'] = rsparen;
 }
 
 int main(){
@@ -1091,9 +1300,13 @@ int main(){
     block(declbegsys|statbegsys|period);
     if(sym != period)
 		error(9);
-    if(err == 0)
-    	printf("compile completed.\n");
-		//interpret();
+    if(err == 0) 	
+    	{
+    		printf("compile completed.\n");
+    		listcode(0);
+    		//interpret();
+    	}
+		
     else
 		printf("There are %d errors in PL/0 program\n", err);
 	fclose(midfile);

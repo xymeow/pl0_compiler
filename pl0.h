@@ -5,10 +5,10 @@
 #define nmax       14             // max. no. of digits in numbers
 #define al         10             // length of identifiers
 #define amax       2047           // maximum address
-#define levmax     3              // maximum depth of block nesting
+#define levmax     10              // maximum depth of block nesting
 #define cxmax      2000           // size of code array
 
-#define nul	       0x1
+#define nul        0x1
 #define ident      0x2
 #define number     0x4
 #define plus       0x8
@@ -54,19 +54,22 @@
 #define andsym     0x80000000000
 #define notsym     0x100000000000
 #define orsym      0x200000000000
+#define lsparen    0x400000000000
+#define rsparen    0x800000000000
+#define arraysym   0x1000000000000
 
 enum object {
-    constant, variable, proc, bool
+    constant, variable, proc, bool, array
 };
 
 enum fct {
-    lit, opr, lod, sto, cal, Int, jmp, jpc         // functions
+    lit, opr, lod, sto, cal, Int, jmp, jpc, tra, jug, wta, rda        // functions
 };
 
 typedef struct{
-    enum fct f;		// function code
-    int l; 		// level
-    long a; 		// displacement address
+    enum fct f;     // function code
+    int l;      // level
+    long a;         // displacement address
 } instruction;
 /*  lit 0, a : load constant a
     opr 0, a : execute operation a
@@ -142,7 +145,7 @@ unsigned long wsym[norw] = {
 };
 unsigned long ssym[256];
 
-char mnemonic[8][3+1] = {
+char mnemonic[12][3+1] = {
     "lit",
     "opr",
     "lod",
@@ -150,7 +153,11 @@ char mnemonic[8][3+1] = {
     "cal",
     "int",
     "jmp",
-    "jpc"
+    "jpc",
+    "tra",
+    "jug",
+    "wta",
+    "rda"
 };
 unsigned long declbegsys = constsym|varsym|procsym|boolsym;
 unsigned long statbegsys = beginsym|callsym|ifsym|whilesym;
@@ -162,22 +169,37 @@ struct{
     long val;
     long level;
     long addr;
+    // long dim;
+    // long edim[10];
+    long size;
+
 }table[txmax+1];
 
-char infilename[80];
+long arraysize;
+long sum;
+// struct array
+// {
+//     long dim;
+//     long edim[10];
+// }now;
+
+
+
+
+char infilename[80], midfilename[80];
 FILE* infile;
 FILE* midfile;
 
 // the following variables for block
-long dx;		// data allocation index
-int lev;		// current depth of block nesting
-long tx;		// current table index
+long dx;        // data allocation index
+int lev;        // current depth of block nesting
+long tx;        // current table index
 
 enum object type, type1;
 
 // the following array space for interpreter
 #define stacksize 50000
-long s[stacksize];	// datastore
+long s[stacksize];  // datastore
 
 char* err_msg[] = {
     "",
@@ -206,10 +228,10 @@ char* err_msg[] = {
     "The symbol can not be as the beginning of an expression.",
     "The number is too great.",
     "Redeclear identifier",
-    "",
-    "",
-    "",
-    "",
+    "The array index should be constant.",
+    "Missing ']'.",
+    "The array index should be > 0 .",
+    "Array index Illegal.",
     "",
     "There are too many levels."
 };

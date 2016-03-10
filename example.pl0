@@ -1,11 +1,8 @@
 const a = 0;
-var x,y;
+var x,y,b[5];
 bool i, j;
+
 begin
-	i := false;
-	j := i or (false and false);
-	x := y;
-	y := 3;
-    y := x--;
-    * edrmalfuei*
+    y := 11;
+    for x := 0 to 9 do ++x;
 end.
